@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'M PLUS 1 Code', ui-monospace, monospace;
+}
+
+html, body, #root { min-height: 100%; background: #000; color: #f4f4f5; }
+body { font-family: var(--font-sans); color-scheme: dark; }
+
+@layer components {
+  .glass { @apply rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/25 px-5 py-2 text-sm transition hover:border-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed; }
+  .btn-solid { @apply border-white bg-white text-black hover:bg-zinc-300; }
+  .field { @apply rounded-full border border-white/15 bg-black px-4 py-2 text-sm outline-none focus:border-white; }
+}
