@@ -1,39 +1,105 @@
+
 import { useState } from 'react';
 import { useData } from '../context/DataContext.jsx';
 import { Badge, Card, Empty, SearchBox, Select } from './ui.jsx';
 
-export default function DeviceTable({ devices, showStatusFilter = false }) {
+export default function DeviceTable({ devices = [], showStatusFilter = false }) {
   const { select } = useData();
+
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('all');
   const [risk, setRisk] = useState('all');
-  const rows = devices.filter((d) =>
-    [d.name, d.ip, d.mac, d.vendor, d.type].join(' ').toLowerCase().includes(q.trim().toLowerCase())
-    && (status === 'all' || d.status === status)
-    && (risk === 'all' || d.risk === risk));
+
+  const rows = devices.filter((d) => {
+    const searchText = [
+      d.name,
+      d.ip,
+      d.mac,
+      d.vendor,
+      d.type,
+    ].join(' ').toLowerCase();
+
+    return (
+      searchText.includes(q.trim().toLowerCase()) &&
+      (status === 'all' || d.status === status) &&
+      (risk === 'all' || d.risk === risk)
+    );
+  });
 
   return (
     <Card>
       <div className="mb-4 flex flex-wrap gap-3">
-        <SearchBox value={q} onChange={setQ} placeholder="Search name, IP, MAC" />
-        {showStatusFilter && <Select label="statuses" value={status} onChange={setStatus} options={['approved', 'unknown', 'blocked']} />}
-        <Select label="risk levels" value={risk} onChange={setRisk} options={['critical', 'high', 'medium', 'low']} />
+        <SearchBox
+          value={q}
+          onChange={setQ}
+          placeholder="Search name, IP, MAC"
+        />
+
+        {showStatusFilter && (
+          <Select
+            label="statuses"
+            value={status}
+            onChange={setStatus}
+            options={['approved', 'unknown', 'blocked']}
+          />
+        )}
+
+        <Select
+          label="risk levels"
+          value={risk}
+          onChange={setRisk}
+          options={['critical', 'high', 'medium', 'low']}
+        />
       </div>
-      {rows.length === 0 ? <Empty /> : (
+
+      {rows.length === 0 ? (
+        <Empty />
+      ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-sm">
+          <table className="w-full min-w-[850px] text-left text-sm">
             <thead className="text-xs uppercase text-zinc-500">
-              <tr>{['Device', 'IP address', 'MAC address', 'Vendor', 'Status', 'Risk'].map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr>
+              <tr>
+                <th className="px-3 py-3 font-normal">Device</th>
+                <th className="px-3 py-3 font-normal">IP address</th>
+                <th className="px-3 py-3 font-normal">MAC address</th>
+                <th className="px-3 py-3 font-normal">Vendor</th>
+                <th className="px-3 py-3 font-normal">Status</th>
+                <th className="px-3 py-3 font-normal">Risk</th>
+              </tr>
             </thead>
+
             <tbody>
               {rows.map((d) => (
-                <tr key={d.id} onClick={() => select(d.id)} className="cursor-pointer border-t border-white/10 hover:bg-white/5">
-                  <td className="px-3 py-3"><button className="cursor-pointer text-left underline-offset-4 hover:underline">{d.name}</button><div className="text-xs text-zinc-500">{d.type}</div></td>
-                  <td className="px-3">{d.ip}</td>
-                  <td className="px-3">{d.mac}</td>
-                  <td className="px-3 text-zinc-400">{d.vendor}</td>
-                  <td className="px-3"><Badge value={d.status} /></td>
-                  <td className="px-3"><Badge value={d.risk} /></td>
+                <tr
+                  key={d.id}
+                  onClick={() => select(d.id)}
+                  className="cursor-pointer border-t border-white/10 hover:bg-white/5"
+                >
+                  <td className="px-3 py-4 font-medium">
+                    <button className="text-left hover:underline">
+                      {d.name || 'Unknown device'}
+                    </button>
+                  </td>
+
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    {d.ip || 'Not available'}
+                  </td>
+
+                  <td className="px-3 py-4 whitespace-nowrap font-mono text-xs">
+                    {d.mac || 'Unknown'}
+                  </td>
+
+                  <td className="px-3 py-4 text-zinc-400">
+                    {d.vendor || 'Unknown'}
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <Badge value={d.status || 'unknown'} />
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <Badge value={d.risk || 'low'} />
+                  </td>
                 </tr>
               ))}
             </tbody>
