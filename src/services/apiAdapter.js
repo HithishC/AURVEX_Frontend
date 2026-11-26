@@ -83,15 +83,76 @@ function normalizeRisk(band, score = 0) {
   return 'low';
 }
 
+function normalizeConnectionType(value) {
+  const type = String(value || '').trim().toLowerCase();
+
+  if (type === 'wi-fi' || type === 'wifi' || type === 'wireless') {
+    return 'Wi-Fi';
+  }
+
+  if (type === 'ethernet' || type === 'wired') {
+    return 'Ethernet';
+  }
+
+  if (type === 'mixed') {
+    return 'Mixed';
+  }
+
+  return 'Unknown';
+}
+
+function normalizeAuthorization(value, approved, backendStatus) {
+  const status = String(value || '').trim().toLowerCase();
+
+  if (status === 'authorized') return 'Authorized';
+  if (status === 'unauthorized') return 'Unauthorized';
+
+  if (
+    status === 'review required' ||
+    status === 'review_required' ||
+    status === 'insufficient evidence'
+  ) {
+    return 'Review Required';
+  }
+
+  if (approved || backendStatus === 'known') {
+    return 'Authorized';
+  }
+
+  if (backendStatus === 'unknown') {
+    return 'Unauthorized';
+  }
+
+  return 'Review Required';
+}
+
 function mapDevice(device, approved = false) {
   const score = Number(device.risk_score || 0);
   const backendStatus = String(device.status || '').toLowerCase();
   const dhcp = isDhcpDevice(device);
 
+  const authorizationStatus = normalizeAuthorization(
+    device.authorization_status,
+    approved,
+    backendStatus,
+  );
+
+  const rawEvidence = device.connection_evidence;
+
+  const connectionEvidence = Array.isArray(rawEvidence)
+    ? rawEvidence
+    : rawEvidence
+      ? [String(rawEvidence)]
+      : [];
+
   return {
     id: device.mac || device.ip || `${device.hostname || 'unknown'}-${device.first_seen || ''}`,
     name: displayName(device),
+
+    // Device protocol/type and network connection type are separate.
     type: dhcp ? 'DHCP' : 'Device',
+    connectionType: normalizeConnectionType(device.connection_type),
+    connectionEvidence,
 
     ip: displayIp(device.ip),
     mac: device.mac || 'Unknown',
@@ -104,6 +165,15 @@ function mapDevice(device, approved = false) {
         : backendStatus === 'insufficient evidence'
           ? 'insufficient evidence'
           : 'unknown',
+
+    authorizationStatus,
+    authorizationReason:
+      device.authorization_reason ||
+      (authorizationStatus === 'Authorized'
+        ? 'Device is in the approved inventory.'
+        : authorizationStatus === 'Unauthorized'
+          ? 'Device is not in the approved inventory.'
+          : 'Additional device information is required for review.'),
 
     risk: normalizeRisk(device.risk_band, score),
     score: score / 100,

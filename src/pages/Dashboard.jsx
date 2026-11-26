@@ -1,38 +1,195 @@
+
 import { Link } from 'react-router-dom';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
 import { useData } from '../context/DataContext.jsx';
 import { Badge, Card, Empty, Page, Stat, chart } from '../components/ui.jsx';
 
 export default function Dashboard() {
   const { devices, alerts, traffic, select } = useData();
-  const open = alerts.filter((a) => a.status === 'open');
+
+  const open = alerts.filter((alert) => alert.status === 'open');
+
+  const authorized = devices.filter(
+    (device) => device.authorizationStatus === 'Authorized'
+  ).length;
+
+  const unauthorized = devices.filter(
+    (device) => device.authorizationStatus === 'Unauthorized'
+  ).length;
+
+  const reviewRequired = devices.filter(
+    (device) => device.authorizationStatus === 'Review Required'
+  ).length;
+
+  const wifi = devices.filter(
+    (device) => device.connectionType === 'Wi-Fi'
+  ).length;
+
+  const ethernet = devices.filter(
+    (device) => device.connectionType === 'Ethernet'
+  ).length;
+
+  const unknownConnection = devices.filter(
+    (device) => device.connectionType === 'Unknown'
+  ).length;
+
+  const mixedConnection = devices.filter(
+    (device) => device.connectionType === 'Mixed'
+  ).length;
+
+  const anomalies = devices.filter(
+    (device) => device.score >= 0.6
+  ).length;
+
   const stats = [
-    ['Devices', devices.length, `${devices.filter((d) => d.status === 'approved').length} approved`, '/inventory'],
-    ['Unknown', devices.filter((d) => d.status === 'unknown').length, 'awaiting review', '/unknown-devices'],
-    ['Anomalies', devices.filter((d) => d.score >= 0.6).length, 'score 0.60 or higher', '/anomalies'],
-    ['Open alerts', open.length, `${open.filter((a) => a.severity === 'critical').length} critical`, '/alerts'],
+    {
+      label: 'Total devices',
+      value: devices.length,
+      note: 'Detected and inventoried',
+      to: '/inventory',
+    },
+    {
+      label: 'Authorized',
+      value: authorized,
+      note: 'In approved inventory',
+      to: '/inventory',
+    },
+    {
+      label: 'Unauthorized',
+      value: unauthorized,
+      note: 'Not in approved inventory',
+      to: '/unknown-devices',
+    },
+    {
+      label: 'Review required',
+      value: reviewRequired,
+      note: 'Insufficient or changed evidence',
+      to: '/unknown-devices',
+    },
+    {
+      label: 'Wi-Fi devices',
+      value: wifi,
+      note: '802.11 capture evidence',
+      to: '/inventory',
+    },
+    {
+      label: 'Ethernet devices',
+      value: ethernet,
+      note: 'Ethernet frame evidence',
+      to: '/inventory',
+    },
+    {
+      label: 'Anomalies',
+      value: anomalies,
+      note: 'Risk score 0.60 or higher',
+      to: '/anomalies',
+    },
+    {
+      label: 'Open alerts',
+      value: open.length,
+      note: `${open.filter((alert) => alert.severity === 'critical').length} critical`,
+      to: '/alerts',
+    },
   ];
+
   return (
-    <Page title="Security overview" subtitle="Current state of the demo network">
+    <Page
+      title="Security overview"
+      subtitle="Network analysis, device authorization and connection monitoring"
+    >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(([label, value, note, to]) => <Link key={label} to={to}><Stat label={label} value={value} note={note} /></Link>)}
+        {stats.map(({ label, value, note, to }) => (
+          <Link key={label} to={to}>
+            <Stat label={label} value={value} note={note} />
+          </Link>
+        ))}
       </div>
+
+      <Card title="Connection classification">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Stat label="Wi-Fi" value={wifi} />
+          <Stat label="Ethernet" value={ethernet} />
+          <Stat label="Unknown" value={unknownConnection} />
+          <Stat label="Mixed" value={mixedConnection} />
+        </div>
+
+        <p className="mt-4 text-xs text-zinc-500">
+          Connection classification is based on available packet capture
+          evidence and does not always establish physical connectivity.
+        </p>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-5">
-        <Card title="Traffic, MB per hour (solid in, dashed out)" className="xl:col-span-3">
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={traffic}>
-              <CartesianGrid {...chart.grid} /><XAxis dataKey="time" {...chart.axis} /><YAxis {...chart.axis} /><Tooltip {...chart.tooltip} />
-              <Area dataKey="inbound" name="Inbound" stroke="#fff" fill="#fff" fillOpacity={0.12} />
-              <Area dataKey="outbound" name="Outbound" stroke="#a1a1aa" strokeDasharray="5 4" fill="none" />
-            </AreaChart>
-          </ResponsiveContainer>
+        <Card
+          title="Traffic, MB per hour (solid in, dashed out)"
+          className="xl:col-span-3"
+        >
+          {traffic.length === 0 ? (
+            <Empty
+              title="Traffic analytics unavailable"
+              hint="The backend does not currently provide traffic time-series data."
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={traffic}>
+                <CartesianGrid {...chart.grid} />
+                <XAxis dataKey="time" {...chart.axis} />
+                <YAxis {...chart.axis} />
+                <Tooltip {...chart.tooltip} />
+
+                <Area
+                  dataKey="inbound"
+                  name="Inbound"
+                  stroke="#fff"
+                  fill="#fff"
+                  fillOpacity={0.12}
+                />
+
+                <Area
+                  dataKey="outbound"
+                  name="Outbound"
+                  stroke="#a1a1aa"
+                  strokeDasharray="5 4"
+                  fill="none"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </Card>
+
         <Card title="Alert feed" className="xl:col-span-2">
-          {open.length === 0 ? <Empty title="No open alerts" hint="All alerts are handled." /> : open.slice(0, 5).map((a) => (
-            <button key={a.id} onClick={() => select(a.deviceId)} className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-white/10 py-3 text-left text-sm hover:bg-white/5">
-              <span>{a.title}<span className="block text-xs text-zinc-500">{a.time}</span></span><Badge value={a.severity} />
-            </button>
-          ))}
+          {open.length === 0 ? (
+            <Empty
+              title="No open alerts"
+              hint="No alerts have been generated by the current analysis."
+            />
+          ) : (
+            open.slice(0, 5).map((alert) => (
+              <button
+                key={alert.id}
+                onClick={() => select(alert.deviceId)}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-white/10 py-3 text-left text-sm hover:bg-white/5"
+              >
+                <span>
+                  {alert.title}
+                  <span className="block text-xs text-zinc-500">
+                    {alert.time}
+                  </span>
+                </span>
+
+                <Badge value={alert.severity} />
+              </button>
+            ))
+          )}
         </Card>
       </div>
     </Page>

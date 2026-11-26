@@ -17,6 +17,9 @@ export default function DeviceTable({ devices = [], showStatusFilter = false }) 
       d.mac,
       d.vendor,
       d.type,
+      d.connectionType,
+      d.authorizationStatus,
+      ...(d.connectionEvidence || []),
     ].join(' ').toLowerCase();
 
     return (
@@ -32,7 +35,7 @@ export default function DeviceTable({ devices = [], showStatusFilter = false }) 
         <SearchBox
           value={q}
           onChange={setQ}
-          placeholder="Search name, IP, MAC"
+          placeholder="Search name, IP, MAC, connection..."
         />
 
         {showStatusFilter && (
@@ -40,7 +43,7 @@ export default function DeviceTable({ devices = [], showStatusFilter = false }) 
             label="statuses"
             value={status}
             onChange={setStatus}
-            options={['approved', 'unknown', 'blocked']}
+            options={['approved', 'unknown', 'changed', 'insufficient evidence']}
           />
         )}
 
@@ -56,13 +59,15 @@ export default function DeviceTable({ devices = [], showStatusFilter = false }) 
         <Empty />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[850px] text-left text-sm">
+          <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="text-xs uppercase text-zinc-500">
               <tr>
                 <th className="px-3 py-3 font-normal">Device</th>
                 <th className="px-3 py-3 font-normal">IP address</th>
                 <th className="px-3 py-3 font-normal">MAC address</th>
                 <th className="px-3 py-3 font-normal">Vendor</th>
+                <th className="px-3 py-3 font-normal">Connection</th>
+                <th className="px-3 py-3 font-normal">Authorization</th>
                 <th className="px-3 py-3 font-normal">Status</th>
                 <th className="px-3 py-3 font-normal">Risk</th>
               </tr>
@@ -91,6 +96,32 @@ export default function DeviceTable({ devices = [], showStatusFilter = false }) 
 
                   <td className="px-3 py-4 text-zinc-400">
                     {d.vendor || 'Unknown'}
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <div className="flex flex-col gap-1">
+                      <Badge value={d.connectionType || 'Unknown'} />
+                      {d.connectionEvidence?.length > 0 && (
+                        <span
+                          className="max-w-[160px] text-xs text-zinc-500"
+                          title={d.connectionEvidence.join(', ')}
+                        >
+                          {d.connectionEvidence.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <div className="flex flex-col gap-1">
+                      <Badge value={d.authorizationStatus || 'Review Required'} />
+                      <span
+                        className="max-w-[190px] text-xs text-zinc-500"
+                        title={d.authorizationReason || ''}
+                      >
+                        {d.authorizationReason || 'Needs verification'}
+                      </span>
+                    </div>
                   </td>
 
                   <td className="px-3 py-4">
